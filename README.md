@@ -35,13 +35,72 @@ The full wire format, key derivation, auth scheme, and storage schema are in
 ## Run
 
 ```sh
-docker build -t shoal .
-docker run -d -p 7420:7420 -v shoal-data:/data shoal
+docker compose up -d --build
 ```
 
 Or bare: `cargo run --release`. Configuration is two environment variables,
 `SHOAL_DB` (SQLite path, default `shoal.db`) and `SHOAL_BIND` (default
-`0.0.0.0:7420`). Put TLS in front with your reverse proxy of choice.
+`0.0.0.0:7420`). The compose file binds the port to loopback only, so a
+front door (below) is required before any device can reach it.
+
+## Deploy with Tailscale (recommended)
+
+Keeps the server completely off the public internet. Your devices reach it
+over your tailnet from anywhere, and Tailscale provides a real HTTPS
+certificate, which app clients on Android require in release builds.
+
+On the server machine:
+
+```sh
+docker compose up -d --build
+tailscale serve --bg 7420
+```
+
+`tailscale serve` proxies `https://<machine>.<tailnet>.ts.net` to
+`127.0.0.1:7420` with a managed certificate. If the command reports that
+HTTPS is disabled, enable it once in the Tailscale admin console (DNS →
+HTTPS Certificates) and re-run.
+
+On each device: install Tailscale, join the same tailnet, then point the app
+at `https://<machine>.<tailnet>.ts.net`. Verify from the device's browser:
+
+```
+https://<machine>.<tailnet>.ts.net/healthz   ->   {"status":"ok"}
+```
+
+Sync clients tolerate the server being unreachable (ops queue locally), so a
+home machine that sleeps or reboots is fine.
+
+## Deploy on the public internet (alternative)
+
+Only if a tailnet does not work for you. Put a TLS reverse proxy in front
+and forward the port. With [Caddy](https://caddyserver.com/):
+
+```
+sync.example.com {
+    reverse_proxy 127.0.0.1:7420
+}
+```
+
+Caddy obtains certificates automatically. You also need a DNS record (or
+dynamic DNS) for the machine and a router forward for 443. Every request
+still has to carry a valid ed25519 signature, and payloads are ciphertext,
+but unlike the tailnet route the endpoint itself is reachable by anyone.
+
+## Backup
+
+State is one SQLite file. With the compose setup it lives in the
+`shoal-data` volume as `/data/shoal.db`. Stop the container for a consistent
+copy (clients queue locally in the meantime):
+
+```sh
+docker compose stop shoal
+docker cp shoal:/data/shoal.db ./shoal-backup.db
+docker compose start shoal
+```
+
+The log is append-only ciphertext, so backups are safe to store anywhere.
+Restoring is copying the file back and restarting the container.
 
 ## API
 

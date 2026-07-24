@@ -1,0 +1,14 @@
+services:
+  shoal:
+    build: .
+    container_name: shoal
+    restart: unless-stopped
+    # Loopback only: nothing on the LAN or internet reaches this directly.
+    # Tailscale serve (or your reverse proxy) is the front door.
+    ports:
+      - "127.0.0.1:7420:7420"
+    volumes:
+      - shoal-data:/data
+
+volumes:
+  shoal-data:
