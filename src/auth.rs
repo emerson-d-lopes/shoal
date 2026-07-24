@@ -27,7 +27,12 @@ impl AuthError {
 
 /// The signed message is:
 ///   method \n path-with-query \n timestamp \n hex(sha256(body))
-pub fn signing_message(method: &str, path_and_query: &str, timestamp: &str, body: &[u8]) -> Vec<u8> {
+pub fn signing_message(
+    method: &str,
+    path_and_query: &str,
+    timestamp: &str,
+    body: &[u8],
+) -> Vec<u8> {
     let body_hash = hex(&Sha256::digest(body));
     format!("{method}\n{path_and_query}\n{timestamp}\n{body_hash}").into_bytes()
 }
@@ -72,7 +77,8 @@ pub fn verify(
     let sig = Signature::from_bytes(&sig_bytes);
 
     let msg = signing_message(method, path_and_query, timestamp, body);
-    key.verify(&msg, &sig).map_err(|_| AuthError::BadSignature)?;
+    key.verify(&msg, &sig)
+        .map_err(|_| AuthError::BadSignature)?;
 
     Ok(pubkey_b64.to_string())
 }
@@ -87,14 +93,26 @@ mod tests {
     use axum::http::HeaderValue;
     use ed25519_dalek::{Signer, SigningKey};
 
-    fn signed_headers(key: &SigningKey, method: &str, path: &str, body: &[u8], ts: i64) -> HeaderMap {
+    fn signed_headers(
+        key: &SigningKey,
+        method: &str,
+        path: &str,
+        body: &[u8],
+        ts: i64,
+    ) -> HeaderMap {
         let ts = ts.to_string();
         let msg = signing_message(method, path, &ts, body);
         let sig = key.sign(&msg);
         let mut h = HeaderMap::new();
-        h.insert("x-shoal-pubkey", HeaderValue::from_str(&B64.encode(key.verifying_key().as_bytes())).unwrap());
+        h.insert(
+            "x-shoal-pubkey",
+            HeaderValue::from_str(&B64.encode(key.verifying_key().as_bytes())).unwrap(),
+        );
         h.insert("x-shoal-timestamp", HeaderValue::from_str(&ts).unwrap());
-        h.insert("x-shoal-signature", HeaderValue::from_str(&B64.encode(sig.to_bytes())).unwrap());
+        h.insert(
+            "x-shoal-signature",
+            HeaderValue::from_str(&B64.encode(sig.to_bytes())).unwrap(),
+        );
         h
     }
 

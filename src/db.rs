@@ -60,14 +60,18 @@ impl Db {
         conn.pragma_update(None, "synchronous", "NORMAL")?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
         conn.execute_batch(SCHEMA)?;
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     /// In-memory database, used by tests.
     pub fn open_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
         conn.execute_batch(SCHEMA)?;
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     /// Append a batch atomically. Existing op_ids are returned with their
@@ -117,7 +121,20 @@ impl Db {
             results.push((op.op_id.clone(), seq));
         }
         tx.commit()?;
-        Ok(PushResult { results, head, appended })
+        Ok(PushResult {
+            results,
+            head,
+            appended,
+        })
+    }
+
+    pub fn user_op_count(&self, pubkey: &str) -> Result<i64> {
+        let conn = self.conn.lock().unwrap();
+        Ok(conn.query_row(
+            "SELECT COUNT(*) FROM ops WHERE pubkey = ?1",
+            params![pubkey],
+            |r| r.get(0),
+        )?)
     }
 
     pub fn pull(

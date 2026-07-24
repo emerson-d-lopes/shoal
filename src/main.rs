@@ -17,7 +17,11 @@ async fn main() -> Result<()> {
     let bind = std::env::var("SHOAL_BIND").unwrap_or_else(|_| "0.0.0.0:7420".into());
     let addr: SocketAddr = bind.parse()?;
 
-    let state = Arc::new(server::AppState::new(db::Db::open(&PathBuf::from(&db_path))?));
+    let limits = server::Limits::from_env();
+    let state = Arc::new(server::AppState::with_limits(
+        db::Db::open(&PathBuf::from(&db_path))?,
+        limits,
+    ));
     let app = server::router(state);
 
     tracing::info!(%addr, db = %db_path, "shoal listening");

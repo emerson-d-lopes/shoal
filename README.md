@@ -38,10 +38,21 @@ The full wire format, key derivation, auth scheme, and storage schema are in
 docker compose up -d --build
 ```
 
-Or bare: `cargo run --release`. Configuration is two environment variables,
-`SHOAL_DB` (SQLite path, default `shoal.db`) and `SHOAL_BIND` (default
-`0.0.0.0:7420`). The compose file binds the port to loopback only, so a
-front door (below) is required before any device can reach it.
+Or pull the prebuilt image instead of building:
+`ghcr.io/emerson-d-lopes/shoal:latest` (published by CI on every main push).
+Or bare: `cargo run --release`.
+
+Configuration is environment variables:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `SHOAL_DB` | `shoal.db` | SQLite path |
+| `SHOAL_BIND` | `0.0.0.0:7420` | Listen address |
+| `SHOAL_RATE_PER_MIN` | `120` | Authenticated requests per user per minute |
+| `SHOAL_MAX_OPS_PER_USER` | `1000000` | Stored op cap per user; pushes past it get 507 |
+
+The compose file binds the port to loopback only, so a front door (below) is
+required before any device can reach it.
 
 ## Deploy with Tailscale (recommended)
 
