@@ -1,0 +1,25 @@
+[package]
+name = "shoal"
+version = "0.1.0"
+edition = "2021"
+description = "Self-hosted E2E-encrypted sync server for local-first apps"
+license = "MIT"
+
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+base64 = "0.22"
+sha2 = "0.10"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures = "0.3"
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json"] }
+rand = "0.8"
