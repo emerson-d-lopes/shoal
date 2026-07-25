@@ -4,8 +4,7 @@ Self-hosted sync server for local-first apps. One small Rust binary stores an
 append-only log of end-to-end encrypted operations per user. Clients merge,
 the server only stores and orders ciphertext.
 
-Built to sync my own apps ([tuna](https://github.com/emerson-d-lopes/tuna),
-[mnemonic](https://github.com/emerson-d-lopes/mnemonic),
+Built to sync my own apps ([mnemonic](https://github.com/emerson-d-lopes/mnemonic),
 [habit-tracker](https://github.com/emerson-d-lopes/habit-tracker)) across
 devices without a cloud account.
 
@@ -127,7 +126,7 @@ All endpoints except `/healthz` require ed25519 request signatures. See
 
 ## Status
 
-Server core is working with integration tests. Client SDKs (Kotlin for tuna,
+Server core is working with integration tests. Client SDKs (Kotlin for Android,
 TypeScript for the web apps) are in progress.
 
 ## License

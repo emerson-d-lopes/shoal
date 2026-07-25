@@ -28,8 +28,8 @@ An op is one change to one record. Wire format (JSON):
 ```json
 {
   "op_id":      "uuid v4, client-generated, idempotency key",
-  "collection": "tuna",
-  "record_id":  "playlist/8f3c...",
+  "collection": "mnemonic",
+  "record_id":  "card/8f3c...",
   "hlc":        "0189a7c2f3e8-0003-a1b2c3d4",
   "payload":    "base64(XChaCha20-Poly1305(plaintext))"
 }

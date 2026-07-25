@@ -83,7 +83,7 @@ async fn spawn_server_with(limits: Limits) -> String {
 fn op(op_id: &str, record_id: &str, hlc: &str) -> Value {
     json!({
         "op_id": op_id,
-        "collection": "tuna",
+        "collection": "mnemonic",
         "record_id": record_id,
         "hlc": hlc,
         "payload": B64.encode(b"ciphertext-placeholder"),
@@ -160,13 +160,13 @@ async fn collection_filter() {
     let c = Client::new(5, &base);
 
     let mut mixed = op("m-1", "r/1", "01");
-    mixed["collection"] = json!("mnemonic");
+    mixed["collection"] = json!("habits");
     c.push(json!([mixed, op("t-1", "r/2", "02")])).await;
 
-    let (_, resp) = c.pull("since=0&collection=tuna").await;
+    let (_, resp) = c.pull("since=0&collection=mnemonic").await;
     let ops = resp["ops"].as_array().unwrap();
     assert_eq!(ops.len(), 1);
-    assert_eq!(ops[0]["collection"], "tuna");
+    assert_eq!(ops[0]["collection"], "mnemonic");
     // head is the user's global head, not per-collection.
     assert_eq!(resp["head"], 2);
 }
