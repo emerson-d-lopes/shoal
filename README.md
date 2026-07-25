@@ -129,6 +129,12 @@ All endpoints except `/healthz` require ed25519 request signatures. See
 Server core is working with integration tests. Client SDKs (Kotlin for Android,
 TypeScript for the web apps) are in progress.
 
+## Related
+
+[shoal-client](https://github.com/emerson-d-lopes/shoal-client) is the TypeScript client.
+Protocol documentation is at [shoal.edfl.dev](https://shoal.edfl.dev).
+
 ## License
 
 MIT
+
