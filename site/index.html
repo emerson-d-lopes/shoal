@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shoal — self-hosted e2e-encrypted sync for local-first apps</title>
+<meta name="description" content="Self-hosted sync server for local-first apps. One small Rust binary stores an append-only log of end-to-end encrypted operations per user.">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --fg: #d6d6d6;
+    --fg-dim: #8a8a8a;
+    --fg-bright: #f2f2f2;
+    --line: #262626;
+    --code-bg: #171717;
+    color-scheme: dark light;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafafa;
+      --fg: #333333;
+      --fg-dim: #757575;
+      --fg-bright: #111111;
+      --line: #e2e2e2;
+      --code-bg: #f0f0f0;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 ui-sans-serif, system-ui, sans-serif;
+    text-transform: lowercase;
+  }
+  main { max-width: 42rem; margin: 0 auto; padding: 4rem 1.25rem 6rem; }
+  h1 { font-size: 1.6rem; color: var(--fg-bright); margin: 0 0 0.25rem; font-weight: 600; }
+  h2 { font-size: 1.05rem; color: var(--fg-bright); margin: 3rem 0 0.75rem; font-weight: 600; }
+  p { margin: 0.75rem 0; }
+  .tagline { color: var(--fg-dim); margin-top: 0; }
+  a { color: var(--fg-bright); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--fg-dim); }
+  a:hover { text-decoration-color: var(--fg-bright); }
+  code, pre {
+    font: 0.85rem/1.6 ui-monospace, "Cascadia Code", Consolas, monospace;
+    background: var(--code-bg);
+    border-radius: 4px;
+    text-transform: none;
+  }
+  code { padding: 0.1rem 0.35rem; }
+  pre { padding: 0.9rem 1rem; overflow-x: auto; border: 1px solid var(--line); }
+  pre code { padding: 0; background: none; }
+  ul { padding-left: 1.2rem; margin: 0.75rem 0; }
+  li { margin: 0.4rem 0; }
+  li strong { color: var(--fg-bright); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.9rem; }
+  th, td { text-align: left; padding: 0.45rem 0.75rem 0.45rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-dim); font-weight: 500; }
+  td code { white-space: nowrap; }
+  footer { margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--line); color: var(--fg-dim); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>shoal</h1>
+  <p class="tagline">self-hosted sync server for local-first apps</p>
+
+  <p>one small rust binary stores an append-only log of end-to-end encrypted
+  operations per user. clients merge, the server only stores and orders
+  ciphertext.</p>
+
+  <h2>properties</h2>
+  <ul>
+    <li><strong>end-to-end encrypted.</strong> payloads are xchacha20-poly1305
+    ciphertext. the server never holds a decryption key.</li>
+    <li><strong>no accounts.</strong> identity is an ed25519 keypair derived
+    from a 12-word bip39 mnemonic. the same words on a new phone restore
+    everything.</li>
+    <li><strong>app-agnostic.</strong> apps are namespaced by a
+    <code>collection</code> string. one server instance syncs any number of
+    apps.</li>
+    <li><strong>offline-first.</strong> the server is an availability
+    convenience. apps work fully without it and reconcile when it
+    returns.</li>
+    <li><strong>small.</strong> axum + sqlite, one binary, one file of
+    state.</li>
+  </ul>
+
+  <h2>how it works</h2>
+  <p>clients append full-state record ops to a local outbox and push them in
+  signed batches. the server assigns each op a per-user sequence number.
+  clients pull ops past their cursor and merge with per-table strategies
+  (last-writer-wins on a hybrid logical clock, or append-only). an sse
+  endpoint pokes connected clients when new ops land.</p>
+  <p>the full wire format, key derivation, auth scheme, and storage schema are
+  in <a href="https://github.com/emerson-d-lopes/shoal/blob/main/PROTOCOL.md">protocol.md</a>.</p>
+
+  <h2>run</h2>
+  <pre><code>docker compose up -d --build</code></pre>
+  <p>or pull the prebuilt image:
+  <code>ghcr.io/emerson-d-lopes/shoal:latest</code>. or bare:
+  <code>cargo run --release</code>.</p>
+
+  <h2>api</h2>
+  <table>
+    <tr><th>endpoint</th><th>purpose</th></tr>
+    <tr><td><code>POST /v1/ops</code></td><td>push a batch of encrypted ops (idempotent by <code>op_id</code>)</td></tr>
+    <tr><td><code>GET /v1/ops?since=N</code></td><td>pull ops past a cursor, optional <code>collection</code> filter</td></tr>
+    <tr><td><code>GET /v1/poke</code></td><td>sse stream, emits when new ops arrive for the caller</td></tr>
+    <tr><td><code>GET /healthz</code></td><td>liveness</td></tr>
+  </table>
+  <p>all endpoints except <code>/healthz</code> require ed25519 request
+  signatures.</p>
+
+  <h2>clients</h2>
+  <p>a typescript client is at
+  <a href="https://github.com/emerson-d-lopes/shoal-client">shoal-client</a>,
+  used by <a href="https://mnemonic.edfl.dev">mnemonic</a> and
+  <a href="https://ht.edfl.dev">habit-tracker</a>. a kotlin client for android
+  is in progress.</p>
+
+  <footer>
+    <a href="https://github.com/emerson-d-lopes/shoal">github</a> ·
+    mit license ·
+    <a href="https://www.edfl.dev">edfl.dev</a>
+  </footer>
+</main>
+</body>
+</html>
