@@ -3,7 +3,7 @@ name = "shoal"
 version = "0.1.0"
 edition = "2021"
 description = "Self-hosted E2E-encrypted sync server for local-first apps"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 axum = "0.8"
