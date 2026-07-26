@@ -11,7 +11,9 @@ devices without a cloud account.
 ## Properties
 
 - **End-to-end encrypted.** Payloads are XChaCha20-Poly1305 ciphertext. The
-  server never holds a decryption key.
+  server never holds a decryption key. Record contents stay private, while
+  metadata such as the app name, record id, and write times does not. See
+  [what the server can see](PROTOCOL.md#what-the-server-can-see).
 - **No accounts.** Identity is an ed25519 keypair derived from a 12-word
   BIP39 mnemonic. The same words on a new phone restore everything.
 - **App-agnostic.** Apps are namespaced by a `collection` string. One server
@@ -126,8 +128,15 @@ All endpoints except `/healthz` require ed25519 request signatures. See
 
 ## Status
 
-Server core is working with integration tests. Client SDKs (Kotlin for Android,
-TypeScript for the web apps) are in progress.
+Server core is working, with integration tests and CI. The TypeScript client
+is usable and has its own test suite. The Kotlin client for Android is in
+progress.
+
+## Security
+
+Threat model and what an operator can observe:
+[what the server can see](PROTOCOL.md#what-the-server-can-see). To report a
+vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Related
 
@@ -136,5 +145,6 @@ Protocol documentation is at [shoal.edfl.dev](https://shoal.edfl.dev).
 
 ## License
 
-MIT
+MIT or Apache-2.0, at your option. See [LICENSE-MIT](LICENSE-MIT) and
+[LICENSE-APACHE](LICENSE-APACHE).
 

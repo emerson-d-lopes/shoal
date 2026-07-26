@@ -136,6 +136,49 @@ The log is append-only. The server never updates or deletes ops (compaction is
 a possible v2 feature and would be client-driven, since only clients can read
 payloads).
 
+## What the server can see
+
+"End-to-end encrypted" here means the server cannot read record contents. It
+does not mean the log is opaque. Everything in the `ops` table except `payload`
+is stored in the clear, so an operator with database access learns:
+
+| Visible | What it reveals |
+|---------|-----------------|
+| `collection` | Which apps you run. The value is a plain name like `mnemonic`. |
+| `record_id` | The client convention is `table/uuid`, so table names leak. `card/8f3c...` says the record is a card. |
+| `hlc` | Wall-clock milliseconds of every write, plus a 32-bit node id that is stable per device, so writes can be attributed to a device and correlated over time. |
+| `created_at`, `seq` | Server-side arrival time and total op count per user. |
+| `payload` length | Approximate record size. |
+| `pubkey` | A stable pseudonymous identifier for the user across all their apps. |
+
+Put together, an operator can build an accurate picture of which apps you use,
+how many records each holds, which device you were on, and when you were
+active. Only the contents stay private.
+
+A malicious server has further reach:
+
+- It can withhold ops or report a stale `head`. Clients have no way to detect
+  this. The log has no hash chain, so there is no integrity proof spanning ops.
+- It can delete ops. Append-only is server policy, not something the protocol
+  enforces.
+- It cannot forge or alter an op. Payloads are AEAD ciphertext and requests
+  carry ed25519 signatures.
+- It cannot move an op to a different record. The AAD binds the ciphertext to
+  `collection || 0x00 || record_id`.
+
+This is an acceptable trade for the intended deployment, which is a server you
+run yourself on your own tailnet. It is worth stating plainly before anyone
+runs shoal somewhere they do not control.
+
+Two properties follow from the key derivation and are worth being explicit
+about:
+
+- **No forward secrecy.** `enc_key` is derived once from the mnemonic seed and
+  never rotates, so a mnemonic disclosed later decrypts the entire history,
+  including ops captured before the disclosure.
+- **Key loss is data loss.** There is no recovery path. The 12 words are the
+  only copy of the key, and the server holds nothing that helps.
+
 ## Client contract
 
 - Every local write also appends the full new record state (not a diff) to a
