@@ -105,6 +105,7 @@
     <tr><th>endpoint</th><th>purpose</th></tr>
     <tr><td><code>POST /v1/ops</code></td><td>push a batch of encrypted ops (idempotent by <code>op_id</code>)</td></tr>
     <tr><td><code>GET /v1/ops?since=N</code></td><td>pull ops past a cursor, optional <code>collection</code> filter</td></tr>
+    <tr><td><code>POST /v1/compact</code></td><td>drop ops superseded by a later write to the same record</td></tr>
     <tr><td><code>GET /v1/poke</code></td><td>sse stream, emits when new ops arrive for the caller</td></tr>
     <tr><td><code>GET /healthz</code></td><td>liveness</td></tr>
   </table>
@@ -120,7 +121,7 @@
 
   <footer>
     <a href="https://github.com/emerson-d-lopes/shoal">github</a> ·
-    mit license ·
+    mit or apache-2.0 ·
     <a href="https://www.edfl.dev">edfl.dev</a>
   </footer>
 </main>
