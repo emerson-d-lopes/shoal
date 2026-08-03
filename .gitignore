@@ -3,4 +3,14 @@
 *.db-shm
 *.db-wal
 
+# Vercel state for the docs page under site/. The .env* rule is here rather
+# than only in site/.gitignore because that file is itself untracked, so a
+# fresh clone would otherwise have nothing keeping local credentials out.
 site/.vercel/
+site/.env*
+.env
+.env.*
+
+# Per-machine deployment settings (allowlisted keys, caps). The committed
+# compose file stays generic; each host writes its own override.
+docker-compose.override.yml

@@ -19,7 +19,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 anyhow = "1"
 tokio-stream = { version = "0.1", features = ["sync"] }
 futures = "0.3"
+tower-http = { version = "0.6", features = ["cors"] }
 
 [dev-dependencies]
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "stream"] }
 rand = "0.8"

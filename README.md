@@ -33,6 +33,8 @@ clients when new ops land.
 The full wire format, key derivation, auth scheme, and storage schema are in
 [PROTOCOL.md](PROTOCOL.md).
 
+![shoal architecture](docs/architecture.png)
+
 ## Run
 
 ```sh
@@ -49,11 +51,46 @@ Configuration is environment variables:
 |----------|---------|---------|
 | `SHOAL_DB` | `shoal.db` | SQLite path |
 | `SHOAL_BIND` | `0.0.0.0:7420` | Listen address |
+| `SHOAL_ALLOWED_PUBKEYS` | empty | Comma-separated base64url public keys. Empty means anyone with a valid signature |
+| `SHOAL_ALLOWED_ORIGINS` | `*` | Comma-separated origins allowed to call the API from a browser |
 | `SHOAL_RATE_PER_MIN` | `120` | Authenticated requests per user per minute |
 | `SHOAL_MAX_OPS_PER_USER` | `1000000` | Stored op cap per user; pushes past it get 507 |
+| `SHOAL_MAX_USERS` | `0` (off) | Distinct users the server will create |
+| `SHOAL_MAX_TOTAL_OPS` | `0` (off) | Stored op cap across all users |
+| `SHOAL_MAX_STREAMS_PER_USER` | `8` | Concurrent `/v1/poke` streams per user |
+| `SHOAL_MAX_PAYLOAD_BYTES` | `262144` | Largest accepted op payload (decoded bytes). Raise for apps with large records; clients must set `maxPayloadBytes` to match |
 
 The compose file binds the port to loopback only, so a front door (below) is
 required before any device can reach it.
+
+### Who is allowed in
+
+A valid signature proves someone holds a private key. It does not prove the
+key is one you meant to host, and generating a keypair costs nothing. With no
+allowlist, `SHOAL_MAX_OPS_PER_USER` is a limit per identity rather than per
+person, and anyone who can reach the port can mint as many identities as they
+like.
+
+On a tailnet that is fine, because reaching the port already requires being on
+your network. Anywhere else, name the keys you intend to serve:
+
+```sh
+SHOAL_ALLOWED_PUBKEYS=Ai9k...,Bx2p...
+```
+
+A client prints its own key as `sync.publicKeyB64`. Requests from anything
+else get a 403. If you would rather stay open, set `SHOAL_MAX_USERS` or
+`SHOAL_MAX_TOTAL_OPS` so total storage still has a ceiling. The server logs a
+warning at startup when all three are unset.
+
+### Browsers
+
+Web clients send `X-Shoal-*` headers, which means every cross-origin request
+is preceded by a preflight. shoal answers preflights itself and defaults to
+allowing any origin, which is safe here because requests carry no cookies and
+no ambient authority: each one is signed, and a page that does not hold the
+mnemonic cannot produce a signature. Restrict it with `SHOAL_ALLOWED_ORIGINS`
+if you would rather be explicit.
 
 ## Deploy with Tailscale (recommended)
 
@@ -95,9 +132,12 @@ sync.example.com {
 ```
 
 Caddy obtains certificates automatically. You also need a DNS record (or
-dynamic DNS) for the machine and a router forward for 443. Every request
-still has to carry a valid ed25519 signature, and payloads are ciphertext,
-but unlike the tailnet route the endpoint itself is reachable by anyone.
+dynamic DNS) for the machine and a router forward for 443.
+
+Set `SHOAL_ALLOWED_PUBKEYS` before doing this. Payloads stay ciphertext and
+every request still needs a valid ed25519 signature, but a signature from a
+key you never listed is just as valid as yours, so on an open server the only
+thing standing between a stranger and your disk is the global op cap.
 
 ## Backup
 
@@ -120,17 +160,50 @@ Restoring is copying the file back and restarting the container.
 |----------|---------|
 | `POST /v1/ops` | Push a batch of encrypted ops (idempotent by `op_id`) |
 | `GET /v1/ops?since=N` | Pull ops past a cursor, optional `collection` filter |
+| `POST /v1/compact` | Drop ops superseded by a later write to the same record |
 | `GET /v1/poke` | SSE stream, emits when new ops arrive for the caller |
 | `GET /healthz` | Liveness |
 
 All endpoints except `/healthz` require ed25519 request signatures. See
 [PROTOCOL.md](PROTOCOL.md#authentication).
 
+## Keeping the log from growing forever
+
+Every write appends an op, so a record edited a thousand times costs a
+thousand ops. Only the newest matters under last-writer-wins, so a client can
+ask the server to drop the rest:
+
+```ts
+await sync.compact();           // once, e.g. at app start
+// or, while live sync is running:
+new ShoalSync({ ..., autoCompactEveryMs: 24 * 60 * 60 * 1000 });
+```
+
+The request names a collection and a watermark, and the client passes its own
+pull cursor as the watermark, so nothing it has not already merged is at risk.
+Devices that were offline throughout still converge to the same records.
+
+Do not compact a collection whose ops are merged append-only. The server
+cannot tell the two strategies apart, because it never reads payloads, so the
+choice is the client's. Details and the correctness argument are in
+[PROTOCOL.md](PROTOCOL.md#post-v1compact--drop-superseded-ops).
+
+Without compaction, `SHOAL_MAX_OPS_PER_USER` is a wall: pushes start failing
+with 507 and the only remedy is a larger cap.
+
+## Backup format
+
+State is one SQLite file whose layout is versioned in `PRAGMA user_version`.
+Opening a database from an older shoal migrates it in place on startup, in a
+single transaction that rolls back untouched if anything fails. Take a copy
+first anyway: a migration that rolls back leaves you where you were, but only
+a backup covers the case where the new version has a bug.
+
 ## Status
 
 Server core is working, with integration tests and CI. The TypeScript client
-is usable and has its own test suite. The Kotlin client for Android is in
-progress.
+is usable, syncs live over the poke stream, and has its own test suite. The
+Kotlin client for Android is in progress.
 
 ## Security
 

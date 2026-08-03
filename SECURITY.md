@@ -15,6 +15,8 @@ In scope:
 
 - Anything letting one user read, write, or delete another user's ops.
 - Signature verification bypasses on authenticated endpoints.
+- Bypasses of `SHOAL_ALLOWED_PUBKEYS`, `SHOAL_MAX_USERS`, or
+  `SHOAL_MAX_TOTAL_OPS`.
 - Weaknesses in the key derivation or the AEAD construction described in
   [PROTOCOL.md](PROTOCOL.md).
 - Remote crashes, unbounded memory or disk growth, and other denial of service
@@ -39,3 +41,10 @@ shoal expects a TLS reverse proxy in front of it and is designed to run on a
 private network such as a tailnet. The default compose file binds to loopback
 for that reason. Running it directly on the public internet is supported but
 widens the exposure to anyone who can reach the port.
+
+An open server, meaning one with no `SHOAL_ALLOWED_PUBKEYS`, treats every
+well-formed keypair as a user. Since keypairs are free to generate, per-user
+limits do not bound total storage there, and reports about that configuration
+are treated as a deployment question rather than a vulnerability. Set an
+allowlist, or set `SHOAL_MAX_USERS` and `SHOAL_MAX_TOTAL_OPS`, before exposing
+the port beyond a private network.

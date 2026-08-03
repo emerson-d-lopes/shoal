@@ -18,9 +18,23 @@ async fn main() -> Result<()> {
     let addr: SocketAddr = bind.parse()?;
 
     let limits = server::Limits::from_env();
-    let state = Arc::new(server::AppState::with_limits(
+    let access = server::Access::from_env();
+
+    // An operator who leaves the server open and sets no global ceiling has
+    // no bound on disk use, because anyone who can reach the port can mint
+    // unlimited identities. Say so at startup rather than in the docs only.
+    if access.is_open() && limits.max_users == 0 && limits.max_total_ops == 0 {
+        tracing::warn!(
+            "no SHOAL_ALLOWED_PUBKEYS, SHOAL_MAX_USERS or SHOAL_MAX_TOTAL_OPS set: \
+             any public key can create a user, so per-user limits do not bound total storage. \
+             Safe on a tailnet, risky on the public internet."
+        );
+    }
+
+    let state = Arc::new(server::AppState::with_access(
         db::Db::open(&PathBuf::from(&db_path))?,
         limits,
+        access,
     ));
     let app = server::router(state);
 
