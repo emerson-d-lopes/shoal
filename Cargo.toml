@@ -22,5 +22,5 @@ futures = "0.3"
 tower-http = { version = "0.6", features = ["cors"] }
 
 [dev-dependencies]
-reqwest = { version = "0.12", features = ["json", "stream"] }
+reqwest = { version = "0.13", features = ["json", "stream"] }
 rand = "0.8"
